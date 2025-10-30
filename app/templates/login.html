@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вход</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="form-container">
+        <h2>Вход</h2>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Пароль" required><br>
+            <button type="submit">Войти</button>
+        </form>
+        <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const res = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            
+            const message = document.getElementById('message');
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('accessToken', data.access_token);
+                // Устанавливаем cookie для использования в home.html
+                document.cookie = `access_token=Bearer ${data.access_token}; path=/; max-age=1800`;
+                message.innerHTML = '<p style="color:green">Успешный вход! Перенаправление...</p>';
+                setTimeout(() => window.location.href = '/', 1500);
+            } else {
+                const err = await res.json();
+                message.innerHTML = `<p style="color:red">${err.detail || 'Неверный email или пароль'}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

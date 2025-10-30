@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="form-container">
+        <h2>Регистрация</h2>
+        <form id="registerForm">
+            <input type="email" id="email" placeholder="Email" required><br>
+            <input type="password" id="password" placeholder="Пароль" required><br>
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+        <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const res = await fetch('/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            
+            const message = document.getElementById('message');
+            if (res.ok) {
+                message.innerHTML = '<p style="color:green">Успешно! Перенаправление...</p>';
+                setTimeout(() => window.location.href = '/login', 1500);
+            } else {
+                const err = await res.json();
+                message.innerHTML = `<p style="color:red">${err.detail || 'Ошибка'}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!-- app/templates/home.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meeting AI — Мои встречи</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Мои встречи</h1>
+            <button id="logout">Выйти</button>
+        </header>
+
+        <!-- Зона загрузки -->
+        <div id="dropZone" class="drop-zone">
+            <p>Перетащите аудиофайл сюда или кликните для выбора</p>
+            <input type="file" id="fileInput" accept="audio/*" hidden>
+        </div>
+
+        <!-- Список встреч -->
+        <div id="meetingsList">
+            <p>Загрузка...</p>
+        </div>
+    </div>
+
+    <script>
+        const accessToken = "{{ access_token }}";
+        const userEmail = "{{ user_email }}";
+
+        // Выход
+        document.getElementById('logout').onclick = () => {
+            document.cookie = "access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+        };
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) uploadFile(e.target.files[0]);
+        });
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + accessToken },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert('Файл отправлен на обработку!');
+                loadMeetings(); // обновить список
+            })
+            .catch(err => {
+                alert('Ошибка загрузки');
+            });
+        }
+
+        // Загрузка списка встреч
+        function loadMeetings() {
+            fetch('/api/meetings', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(res => res.json())
+            .then(meetings => {
+                const list = document.getElementById('meetingsList');
+                if (meetings.length === 0) {
+                    list.innerHTML = '<p>У вас пока нет встреч.</p>';
+                    return;
+                }
+
+                list.innerHTML = meetings.map(m => `
+                    <div class="meeting-card">
+                        <h3>${m.filename}</h3>
+                        <p><strong>Статус:</strong> ${m.status}</p>
+                        ${m.result ? `
+                            <details>
+                                <summary>Показать результат</summary>
+                                <p><strong>Суммаризация:</strong> ${m.result.summary || 'Нет'}</p>
+                                <pre>${JSON.stringify(m.result.transcript, null, 2)}</pre>
+                            </details>
+                        ` : ''}
+                    </div>
+                `).join('');
+            });
+        }
+
+        // Загружаем при старте
+        loadMeetings();
+    </script>
+</body>
+</html>
