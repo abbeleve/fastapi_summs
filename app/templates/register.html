@@ -7,36 +7,85 @@
 <body>
     <div class="form-container">
         <h2>Регистрация</h2>
-        <form id="registerForm">
+        <form id="registerForm" onsubmit="handleRegister(event)">
             <input type="email" id="email" placeholder="Email" required><br>
             <input type="password" id="password" placeholder="Пароль" required><br>
             <button type="submit">Зарегистрироваться</button>
         </form>
         <p>Уже есть аккаунт? <a href="/login">Войти</a></p>
         <div id="message"></div>
+
+        <div id="verifyForm" style="display:none;">
+            <h2>Подтвердите email</h2>
+            <p>Мы отправили 6-значный код на <strong id="targetEmail"></strong></p>
+            <input type="text" id="verifyCode" placeholder="Код из письма" maxlength="6" required><br>
+            <button type="submit" onclick="verifyCode()">Подтвердить</button>
+            <button type="button" onclick="resendCode()" style="margin-top:10px;">Отправить код повторно</button>
+            <div id="verifyMessage"></div>
+        </div>
     </div>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        let userEmail = '';
+
+        function handleRegister(event) {
+            event.preventDefault();
+            register();
+        }
+
+        async function register() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
-            const res = await fetch('/auth/register', {
+            const messageEl = document.getElementById('message');
+
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, password})
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Ошибка регистрации');
+                }
+
+                userEmail = email;
+                document.getElementById('targetEmail').textContent = email;
+                document.getElementById('registerForm').style.display = 'none';
+                document.getElementById('verifyForm').style.display = 'block';
+                messageEl.innerHTML = '';
+
+            } catch (error) {
+                messageEl.innerHTML = `<p style="color:red">${error.message}</p>`;
+                console.error("Ошибка регистрации:", error);
+            }
+        }
+
+        async function verifyCode() {
+            const code = document.getElementById('verifyCode').value;
+            const messageEl = document.getElementById('verifyMessage');
+
+            const res = await fetch('/auth/verify', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email, password})
+                body: JSON.stringify({email: userEmail, code})
             });
-            
-            const message = document.getElementById('message');
+
             if (res.ok) {
-                message.innerHTML = '<p style="color:green">Успешно! Перенаправление...</p>';
+                messageEl.innerHTML = '<p style="color:green">Email подтверждён! Перенаправление...</p>';
                 setTimeout(() => window.location.href = '/login', 1500);
             } else {
                 const err = await res.json();
-                message.innerHTML = `<p style="color:red">${err.detail || 'Ошибка'}</p>`;
+                messageEl.innerHTML = `<p style="color:red">${err.detail || 'Неверный код'}</p>`;
             }
-        });
+        }
+
+        async function resendCode() {
+            const messageEl = document.getElementById('verifyMessage');
+            // В реальном проекте: эндпоинт /auth/resend-code
+            messageEl.innerHTML = '<p style="color:blue">Функция "Отправить повторно" пока не реализована</p>';
+        }
     </script>
 </body>
 </html>

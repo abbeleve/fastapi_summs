@@ -8,3 +8,4 @@ bcrypt==4.0.1          # ← фиксируем версию
 python-multipart
 alembic
 jinja2
+email-validator
